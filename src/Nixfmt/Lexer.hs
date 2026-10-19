@@ -3,7 +3,6 @@
 
 module Nixfmt.Lexer (lexeme, pushTrivia, takeTrivia, whole, wholeInner) where
 
-import Control.Monad (guard)
 import Control.Monad.State.Strict (evalStateT, get, gets, modify', state)
 import Data.Char (isAlphaNum, isSpace)
 import Data.Functor (($>))
@@ -56,6 +55,7 @@ import Text.Megaparsec (
   manyTill,
   notFollowedBy,
   optional,
+  satisfy,
   some,
   try,
   unPos,
@@ -94,8 +94,8 @@ formatDirective = try $ do
   _ <- chunk "/*nixfmt:"
   isDisable <- (True <$ chunk "disable") <|> (False <$ chunk "enable")
   _ <- chunk "*/"
-  rest <- manyP (\x -> x /= '\n' && x /= '\r')
-  guard $ Text.all isHSpace rest
+  _ <- manyP isHSpace
+  notFollowedBy (satisfy (\x -> x /= '\n' && x /= '\r'))
   end <- getOffset
   return (PTFormatDirective isDisable (start, end))
 
