@@ -579,12 +579,13 @@ prettyOp forceFirstTermWide operation op =
   let -- Walk the operation tree and put a list of things on the same level.
       -- We still need to keep the operators around because they might have comments attached to them.
       -- An operator is put together with its succeeding expression. Only the first operand has none.
-      flatten :: Maybe Leaf -> Expression -> [(Maybe Leaf, Expression)]
-      flatten opL (Operation a opR b) | opR == op = flatten opL a ++ flatten (Just opR) b
-      flatten opL x = [(opL, x)]
+      flatten :: Maybe Leaf -> Expression -> [(Maybe Leaf, Expression)] -> [(Maybe Leaf, Expression)]
+      flatten opL (Operation a opR b) rest | opR == op = flatten opL a (flatten (Just opR) b rest)
+      flatten opL x rest = (opL, x) : rest
+      operands = flatten Nothing operation []
 
       sep
-        | isPipe op, _ : _ <- drop 3 (flatten Nothing operation) = hardline
+        | isPipe op, _ : _ <- drop 3 operands = hardline
         | otherwise = line
 
       -- Called on every operand except the first one (a.k.a. RHS)
@@ -604,7 +605,7 @@ prettyOp forceFirstTermWide operation op =
       prettyOperation (Just op', expr) =
         sep <> pretty (moveTrailingCommentUp op') <> nest (absorbOperation expr)
   in group' RegularG $
-       (concatMap prettyOperation . flatten Nothing) operation
+       concatMap prettyOperation operands
   where
     isPipe (Ann{value = TPipeForward}) = True
     isPipe (Ann{value = TPipeBackward}) = True
