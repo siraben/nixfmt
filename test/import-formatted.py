@@ -30,10 +30,12 @@ class ImportTest(unittest.TestCase):
 
     def test_only_allowed_contents_are_imported(self):
         subprocess.run(['git', 'init', '-q', str(self.dest)], check=True)
+        config = (self.dest / '.git/config').read_bytes()
         hook = self.formatted / '.git/hooks/pre-commit'
         hook.parent.mkdir(parents=True)
         hook.write_text('#!/bin/sh\ntouch ../HOST_EXECUTED\n')
         hook.chmod(0o755)
+        (self.formatted / '.git/config').write_text('[core]\n hooksPath = /malicious\n')
         (self.formatted / '.gitattributes').write_text('*.nix filter=evil\n')
         (self.formatted / 'extra.nix').write_text('malicious new path')
         target = self.dest / 'sub/file.nix'
@@ -41,6 +43,7 @@ class ImportTest(unittest.TestCase):
         self.run_import()
         self.assertEqual(target.read_text(), '{ x = 1; }\n')
         self.assertEqual(target.stat().st_mode & 0o777, 0o640)
+        self.assertEqual((self.dest / '.git/config').read_bytes(), config)
         self.assertFalse((self.dest / 'extra.nix').exists())
         self.assertFalse((self.dest / '.gitattributes').exists())
         subprocess.run(['git', '-C', str(self.dest), '-c', 'user.name=Test',

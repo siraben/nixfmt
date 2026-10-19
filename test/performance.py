@@ -20,6 +20,8 @@ def path(n):
 CASES = {
     'path': path,
     'operators': lambda n: ' && '.join(['x'] * n) + '\n',
+    'selectors': lambda n: 'x' + '.a' * n + '\n',
+    'interpolations': lambda n: '"' + '${x}' * n + '"\n',
     'single-line-string': lambda n: "''" + 'a' * n + "''\n",
     'inline-directives': lambda n: '[ ' + '/*nixfmt:disable*/ ' * n + '0 ]\n',
     'directives': lambda n: '[\n' + '/*nixfmt:enable*/\n0\n' * n + ']\n',
