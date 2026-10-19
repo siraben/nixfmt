@@ -154,6 +154,7 @@ let
         ./test/test.sh
         ./test/mergetool.sh
         python3 ./test/import-formatted.py
+        python3 ./test/cli.py
       '';
       installPhase = "touch $out";
     };
