@@ -204,23 +204,24 @@ convertTrailing = toMaybe . join . map toText
 -- both directives included).
 resolveDirective :: Bool -> (Int, Int) -> Parser Trivium
 resolveDirective isDisable (start, end) = do
-  ParserState{source, pendingDisable} <- get
-  let linePrefix = Text.takeWhileEnd (/= '\n') (Text.take start source)
+  ParserState{source, sourceOffset, pendingDisable} <- get
+  -- Advance through the source incrementally, rather than rescanning its full
+  -- prefix for every directive. At most one directive can end each line.
+  let linePrefix = Text.takeWhileEnd (/= '\n') (Text.take (start - sourceOffset) source)
+      lineStart = start - Text.length linePrefix
+      lineSource = Text.drop (lineStart - sourceOffset) source
+  modify' $ \s -> s{source = lineSource, sourceOffset = lineStart}
   if not (Text.all isHSpace linePrefix)
     then pure $ LineComment $ " nixfmt:" <> (if isDisable then "disable" else "enable")
     else do
-      let lineStart = start - Text.length linePrefix
       fmap FormatDirective $ case (isDisable, pendingDisable) of
-        (True, Nothing) -> Disable <$ modify' (\s -> s{pendingDisable = Just lineStart})
+        (True, Nothing) -> Disable <$ modify' (\s -> s{pendingDisable = Just (lineStart, lineSource)})
         -- A disable inside an already disabled region is inert
         (True, Just _) -> pure Disable
-        (False, Just regionStart) ->
-          Enable (Just (sliceSource regionStart end source))
+        (False, Just (regionStart, regionSource)) ->
+          Enable (Just (Text.take (end - regionStart) regionSource))
             <$ modify' (\s -> s{pendingDisable = Nothing})
         (False, Nothing) -> pure $ Enable Nothing
-
-sliceSource :: Int -> Int -> Text -> Text
-sliceSource start end = Text.take (end - start) . Text.drop start
 
 convertLeadingM :: [ParseTrivium] -> Parser Trivia
 convertLeadingM = fmap mconcat . traverse convert
@@ -298,6 +299,7 @@ whole pa = do
         ParserState
           { pendingTrivia = [],
             source = src,
+            sourceOffset = 0,
             pendingDisable = Nothing,
             cutInterpolations = 0
           }
@@ -306,10 +308,10 @@ whole pa = do
 -- | An unclosed /*nixfmt:disable*/ extends to the end of the file.
 closeUnclosedRegion :: Whole a -> Parser (Whole a)
 closeUnclosedRegion (Whole a finalTrivia) = do
-  ParserState{source, pendingDisable} <- get
+  ParserState{pendingDisable} <- get
   pure $ case pendingDisable of
     Nothing -> Whole a finalTrivia
-    Just regionStart -> Whole a $ finalTrivia <> [FormatDirective $ DisabledToEof (Text.drop regionStart source)]
+    Just (_, regionSource) -> Whole a $ finalTrivia <> [FormatDirective $ DisabledToEof regionSource]
 
 -- | Like 'whole', but running within an enclosing parse (used for
 -- interpolations): isolates the surrounding pending trivia while the
@@ -325,6 +327,6 @@ wholeInner pa = do
   -- A disabled region with exactly one end inside this interpolation cuts it.
   -- Set rather than incremented: cuts of interpolations nested deeper inside
   -- were already observed by their enclosing string and must not leak out.
-  modify' $ \s -> s{cutInterpolations = outerCuts + (if before == after then 0 else 1)}
+  modify' $ \s -> s{cutInterpolations = outerCuts + (if fmap fst before == fmap fst after then 0 else 1)}
   pushTrivia saved
   pure result

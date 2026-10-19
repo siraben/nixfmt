@@ -61,11 +61,12 @@ import Prelude hiding (String)
 data ParserState = ParserState
   { -- | Trivia not yet attached to a token
     pendingTrivia :: Trivia,
-    -- | The full original input, for slicing out raw disabled region text
+    -- | Original input from the last resolved directive's line start onward
     source :: Text,
-    -- | Offset of the line start of the /*nixfmt:disable*/ directive of the
-    -- currently open disabled region, if any
-    pendingDisable :: Maybe Int,
+    -- | Character offset where 'source' begins
+    sourceOffset :: Int,
+    -- | Line-start offset and input suffix of the open disabled region, if any
+    pendingDisable :: Maybe (Int, Text),
     -- | Number of interpolations that a disabled region cuts through, i.e.
     -- exactly one of the region's ends lies inside the interpolation. Used to
     -- detect strings that a region enters or leaves. Cuts of interpolations

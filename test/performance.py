@@ -21,6 +21,8 @@ CASES = {
     'path': path,
     'single-line-string': lambda n: "''" + 'a' * n + "''\n",
     'inline-directives': lambda n: '[ ' + '/*nixfmt:disable*/ ' * n + '0 ]\n',
+    'directives': lambda n: '[\n' + '/*nixfmt:enable*/\n0\n' * n + ']\n',
+    'paired-directives': lambda n: '[\n' + '/*nixfmt:disable*/\n0\n/*nixfmt:enable*/\n' * n + ']\n',
 }
 
 
