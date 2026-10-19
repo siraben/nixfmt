@@ -299,8 +299,17 @@ stripIndentation parts = case commonIndentation $ mapMaybe lineHead parts of
 -- Merge adjacent string parts which resulted as parsing artifacts
 normalizeLine :: [StringPart] -> [StringPart]
 normalizeLine [] = []
-normalizeLine (TextPart "" : xs) = normalizeLine xs
-normalizeLine (TextPart x : TextPart y : xs) = normalizeLine (TextPart (x <> y) : xs)
+normalizeLine (TextPart t : xs) =
+  let (texts, rest) = takeTexts xs
+      combined = Text.concat (t : texts)
+  in if Text.null combined
+       then normalizeLine rest
+       else TextPart combined : normalizeLine rest
+  where
+    takeTexts (TextPart x : rest) =
+      let (texts, remaining) = takeTexts rest
+      in (x : texts, remaining)
+    takeTexts rest = ([], rest)
 normalizeLine (x : xs) = x : normalizeLine xs
 
 fixSimpleString :: [StringPart] -> [[StringPart]]
