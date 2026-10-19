@@ -366,15 +366,19 @@ string =
 
     convertIndentedEscapes = map $ map convertPart
 
-    convertPart (TextPart t) = TextPart (convertEscapes t)
+    convertPart (TextPart t) = TextPart (Text.concat $ convertEscapes t)
     convertPart (Interpolation x) = Interpolation x
 
     -- Converts indented string escapes to simple string escapes
     convertEscapes t
-      | Text.null t = t
-      | "''$" `isPrefixOf` t = "\\$" <> convertEscapes (Text.drop 3 t) -- ''$ -> \$
-      | "'''" `isPrefixOf` t = "''" <> convertEscapes (Text.drop 3 t) -- ''' -> ''
-      | otherwise = Text.take 1 t <> convertEscapes (Text.drop 1 t)
+      | Text.null t = []
+      | "''$" `isPrefixOf` t = "\\$" : convertEscapes (Text.drop 3 t) -- ''$ -> \$
+      | "'''" `isPrefixOf` t = "''" : convertEscapes (Text.drop 3 t) -- ''' -> ''
+      | otherwise =
+          let (plain, rest) = Text.span (/= '\'') t
+          in if Text.null plain
+               then Text.take 1 t : convertEscapes (Text.drop 1 t)
+               else plain : convertEscapes rest
 
 -- TERMS
 

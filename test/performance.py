@@ -17,7 +17,10 @@ def path(n):
     return './' + '/'.join(['a'] * n) + '\n'
 
 
-CASES = {'path': path}
+CASES = {
+    'path': path,
+    'single-line-string': lambda n: "''" + 'a' * n + "''\n",
+}
 
 
 def run(binary, source, verify=False):
