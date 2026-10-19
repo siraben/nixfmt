@@ -136,6 +136,7 @@ let
         shellcheck
         build
         gitMinimal
+        python3
       ];
       patchPhase = "patchShebangs .";
       buildPhase = ''
@@ -146,6 +147,7 @@ let
         git config --global init.defaultBranch main
         ./test/test.sh
         ./test/mergetool.sh
+        python3 ./test/cli.py
       '';
       installPhase = "touch $out";
     };

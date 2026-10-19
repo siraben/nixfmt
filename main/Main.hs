@@ -120,8 +120,13 @@ collectNixFiles path = do
   if
     | dir -> do
         warnDeprecated
-        files <- lift $ listDirectory path
-        concat <$> mapM collectNixFiles ((path </>) <$> files)
+        isLink <- lift $ pathIsSymbolicLink path
+        -- Directory links can escape the requested tree or form cycles.
+        if isLink
+          then pure []
+          else do
+            files <- lift $ listDirectory path
+            concat <$> mapM collectNixFiles ((path </>) <$> files)
     | ".nix" `isSuffixOf` path -> pure [path]
     | otherwise -> do
         warnDeprecated
