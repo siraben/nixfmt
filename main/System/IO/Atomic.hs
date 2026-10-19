@@ -14,7 +14,7 @@ import Control.Exception.Safe (mask, onException)
 import Control.Monad (when)
 import System.Directory (doesFileExist, removeFile, renameFile)
 import System.FilePath (takeDirectory, takeFileName)
-import System.IO (Handle, hClose, openTempFileWithDefaultPermissions)
+import System.IO (Handle, hClose, openTempFile)
 import System.Posix.Files (fileGroup, fileMode, fileOwner, getFileStatus, setFileMode, setOwnerAndGroup)
 
 -- | Like @withFile@ but replaces the contents atomically.
@@ -41,7 +41,8 @@ withOutputFile path act = transact begin commit rollback $ \(tpath, th) -> do
     tmpTemplate = "." <> takeFileName path <> ".atomic"
 
     begin :: IO (FilePath, Handle)
-    begin = openTempFileWithDefaultPermissions tmpDir tmpTemplate
+    -- Keep the temporary file private until the target's attributes are set.
+    begin = openTempFile tmpDir tmpTemplate
 
     -- TODO: Support for non-unix platforms.
     -- TODO: Preserve ctime?
