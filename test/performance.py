@@ -20,6 +20,7 @@ def path(n):
 CASES = {
     'path': path,
     'single-line-string': lambda n: "''" + 'a' * n + "''\n",
+    'inline-directives': lambda n: '[ ' + '/*nixfmt:disable*/ ' * n + '0 ]\n',
 }
 
 
