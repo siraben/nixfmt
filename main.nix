@@ -130,12 +130,19 @@ let
       name = "nixfmt-tests";
       src = fs.toSource {
         root = ./.;
-        fileset = fs.intersection allFiles ./test;
+        fileset = fs.intersection allFiles (
+          fs.unions [
+            ./test
+            ./scripts/import-formatted.sh
+          ]
+        );
       };
       nativeBuildInputs = with pkgs; [
         shellcheck
         build
         gitMinimal
+        python3
+        rsync
       ];
       patchPhase = "patchShebangs .";
       buildPhase = ''
@@ -146,6 +153,7 @@ let
         git config --global init.defaultBranch main
         ./test/test.sh
         ./test/mergetool.sh
+        python3 ./test/import-formatted.py
       '';
       installPhase = "touch $out";
     };

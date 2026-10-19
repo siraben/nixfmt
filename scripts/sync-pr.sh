@@ -280,8 +280,10 @@ next() {
     exit 1
   fi
   step "Syncing changes into the Nixpkgs tree"
-  # We need to move the changed files in result/ back into the tree (without messing up the permissions and other files)
-  rsync --archive --no-perms result/ nixpkgs
+  # Sandboxed output is still untrusted. Import only the original regular Nix
+  # files, never new paths, symlinks, or Git metadata (which could install hooks).
+  # Read just the result link, without resolving a possibly malicious output root.
+  bash "$SCRIPT_DIR/import-formatted.sh" "$baseStorePath" "$(readlink result)" nixpkgs
   git -C nixpkgs add -A
 
   step "Committing the formatted result"
